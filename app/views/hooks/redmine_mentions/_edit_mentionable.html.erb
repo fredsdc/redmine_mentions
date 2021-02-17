@@ -1,38 +1,12 @@
-<%= javascript_include_tag 'jquery.textcomplete.js', :plugin => 'redmine_mentions' %>
-<%= javascript_include_tag 'jquery.overlay.js', :plugin => 'redmine_mentions' %>
-<%= stylesheet_link_tag 'auto_complete.css', :plugin => 'redmine_mentions' %>
-<% regex_find = '/\B'+j(Setting.plugin_redmine_mentions['trigger'])+'(\w*)$/i'%>
+<%= javascript_include_tag 'mentions.js', plugin: 'redmine_mentions' %>
 
-<% if @project %>
-  <% users = @project.users.where(type: 'User').includes(:email_address).where.not(email_addresses: { address: nil }).includes(:preference) %>
-<% else %>
-  <% users = User.active.where(type: 'User').includes(:email_address).where.not(email_addresses: { address: nil }).includes(:preference) %>
-<% end %>
-<% users_regex = users.collect{|u| "\"#{Regexp.escape("#{u.firstname} #{u.lastname}#{" - #{u.mail}" unless u.pref.hide_mail}")}\":#{Setting.protocol}://#{Setting.host_name}#{user_path(u)}".gsub(/(["\/])/, '\\\\\1')}.join('|') %>
-<% regex_highlight = '/\B('+users_regex+')\b/g' %>
 <%= javascript_tag do %>
-  $('#issue_notes').textcomplete([
-    {
-      mentions: <%= users.collect{|u| "#{j h u.firstname} #{j h u.lastname}<small>#{" - #{j h u.mail}" unless u.pref.hide_mail}</small><!-- #{Setting.protocol}://#{Setting.host_name}#{user_path(u)} -->"}.to_json.html_safe %>,
-      match: <%=regex_find%>,
-      search: function(term, callback) {
-        callback($.map(this.mentions, function(mention) {
-          return mention.toLowerCase().indexOf(term.toLowerCase()) !== -1 ? mention : null;
-        }));
-      },
-      index: 1,
-      replace: function(mention) {
-        var name = mention.replace(/(<([^>]+)>)/gi, "");
-        var user = mention.substring(mention.lastIndexOf("<!-- ")+5,mention.lastIndexOf(" -->"));
-        return '"' + name + '":' + user;
-      }
-    }
-  ]).overlay([
-    {
-      match: new RegExp(<%=regex_highlight.html_safe%>),
-      css: {
-        'background-color': '#C6D5F3',
-      }
-    }
-  ]);
+$(document).on('focus', '[data-auto-complete=true]', function(event) {
+  inlineMentionAutoComplete(event.target);
+})
+
+$(function() {
+  $('#issue_description').attr('data-users-url', "<%= mentions_users_auto_completes_path(project_id: @issue.project, user_id: User.current.id) %>&q=");
+  $('#issue_notes').attr('data-users-url', "<%= mentions_users_auto_completes_path(project_id: @issue.project, user_id: User.current.id) %>&q=");
+})
 <% end %>
