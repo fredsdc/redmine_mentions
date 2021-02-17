@@ -1,19 +1,19 @@
 <%= javascript_include_tag 'jquery.textcomplete.js', :plugin => 'redmine_mentions' %>
 <%= javascript_include_tag 'jquery.overlay.js', :plugin => 'redmine_mentions' %>
 <%= stylesheet_link_tag 'auto_complete.css', :plugin => 'redmine_mentions' %>
-<% regex_find = '/\B'+Setting.plugin_redmine_mentions['trigger']+'(\w*)$/i'%>
+<% regex_find = '/\B'+j(Setting.plugin_redmine_mentions['trigger'])+'(\w*)$/i'%>
 
 <% if @project %>
   <% users = @project.users.where(type: 'User').includes(:email_address).where.not(email_addresses: { address: nil }).includes(:preference) %>
 <% else %>
   <% users = User.active.where(type: 'User').includes(:email_address).where.not(email_addresses: { address: nil }).includes(:preference) %>
 <% end %>
-<% users_regex = users.collect{|u| "\"#{Regexp.escape("#{u.firstname} #{u.lastname}")}\":#{Setting.protocol}://#{Setting.host_name}#{user_path(u)}".gsub(/(["\/])/, '\\\\\1')}.join('|') %>
+<% users_regex = users.collect{|u| "\"#{Regexp.escape("#{u.firstname} #{u.lastname}#{" - #{u.mail}" unless u.pref.hide_mail}")}\":#{Setting.protocol}://#{Setting.host_name}#{user_path(u)}".gsub(/(["\/])/, '\\\\\1')}.join('|') %>
 <% regex_highlight = '/\B('+users_regex+')\b/g' %>
-<script>
-  $('#issue_notes,#issue_description').textcomplete([
+<%= javascript_tag do %>
+  $('#issue_notes').textcomplete([
     {
-      mentions: <%= users.collect{|u| "#{u.firstname} #{u.lastname}<small>#{" - " + u.mail unless u.pref.hide_mail}</small><!-- #{Setting.protocol}://#{Setting.host_name}#{user_path(u)} -->"}.to_json.html_safe %>,
+      mentions: <%= users.collect{|u| "#{j h u.firstname} #{j h u.lastname}<small>#{" - #{j h u.mail}" unless u.pref.hide_mail}</small><!-- #{Setting.protocol}://#{Setting.host_name}#{user_path(u)} -->"}.to_json.html_safe %>,
       match: <%=regex_find%>,
       search: function(term, callback) {
         callback($.map(this.mentions, function(mention) {
@@ -22,7 +22,7 @@
       },
       index: 1,
       replace: function(mention) {
-        var name = mention.split('<small>')[0];
+        var name = mention.replace(/(<([^>]+)>)/gi, "");
         var user = mention.substring(mention.lastIndexOf("<!-- ")+5,mention.lastIndexOf(" -->"));
         return '"' + name + '":' + user;
       }
@@ -35,4 +35,4 @@
       }
     }
   ]);
-</script>
+<% end %>
