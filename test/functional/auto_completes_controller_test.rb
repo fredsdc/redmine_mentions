@@ -55,7 +55,7 @@ class AutoCompletesControllerTest < Redmine::ControllerTest
     assert_kind_of Hash, user
     assert_equal 8, user['id']
     assert_equal 8, user['value']
-    assert_equal 'User Misc - @miscuser8', user['label']
+    assert_equal 'User Misc', user['label']
   end
 
   def test_auto_complete_with_user_id_should_not_return_that_user
